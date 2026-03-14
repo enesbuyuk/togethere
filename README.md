@@ -58,6 +58,8 @@ Togethere is a real-time web application built for watching YouTube videos synch
 - **Icons**: Lucide React
 - **Runtime**: Node.js with tsx
 
+## Requirements
+
 - Node.js (Latest stable)
 - pnpm (Recommended)
 
@@ -72,6 +74,8 @@ Create a `.env` file in the root directory and configure the following variables
 
 > [!TIP]
 > You can use the provided `env.example` file as a template: `cp env.example .env`
+
+## Installation and Setup
 
 ### Running with Docker (Recommended)
 
