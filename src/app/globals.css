@@ -1,0 +1,44 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #FF0000;
+  --color-primary-hover: #CC0000;
+  --color-bg-dark: #0F0F0F;
+  --color-accent: #3EA6FF;
+
+  --background-image-orb-red: radial-gradient(circle, #ff0000 0%, transparent 70%);
+  --background-image-orb-blue: radial-gradient(circle, #3ea6ff 0%, transparent 70%);
+  --background-image-orb-purple: radial-gradient(circle, #8e44ad 0%, transparent 70%);
+
+  --animate-orb-move: orbMove 20s infinite alternate linear;
+
+  @keyframes orbMove {
+    0% {
+      transform: translate(0, 0) scale(1);
+    }
+
+    100% {
+      transform: translate(100px, 50px) scale(1.1);
+    }
+  }
+}
+
+@layer base {
+  body {
+    @apply bg-bg-dark text-white overflow-x-hidden min-h-screen;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  button, [role="button"], input[type="button"], input[type="submit"], input[type="reset"], select {
+    cursor: pointer;
+  }
+}
+
+/* Custom Utilities for complex Glassmorphism */
+@layer utilities {
+  .glass-card {
+    @apply bg-white/5 backdrop-blur-[15px] border border-white/10 rounded-[24px];
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  }
+}
