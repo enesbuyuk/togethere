@@ -42,6 +42,7 @@ export interface Room {
     videoState: VideoState;
     history: HistoryItem[];
     queue: QueueItem[];
+    screenShareBy: string | null;
 }
 
 // Global state to persist across hot reloads in development
@@ -139,7 +140,8 @@ export function initSocketIO(httpServer: HTTPServer) {
                             thumbnail: q.thumbnail || undefined, 
                             uploadDate: q.uploadDate || undefined, 
                             addedBy: q.addedBy 
-                        }))
+                        })),
+                        screenShareBy: null
                     };
                 } else {
                     // Create new in DB with explicit defaults to satisfy NOT NULL constraints
@@ -159,7 +161,8 @@ export function initSocketIO(httpServer: HTTPServer) {
                         users: {},
                         videoState: { videoId: '', playlistId: '', time: 0, playing: false },
                         history: [],
-                        queue: []
+                        queue: [],
+                        screenShareBy: null
                     };
                 }
             }
@@ -238,7 +241,8 @@ export function initSocketIO(httpServer: HTTPServer) {
                 history: rooms[roomId].history,
                 queue: rooms[roomId].queue,
                 yourColor: color,
-                isAdmin: rooms[roomId].users[socket.id].isAdmin
+                isAdmin: rooms[roomId].users[socket.id].isAdmin,
+                screenShareBy: rooms[roomId].screenShareBy
             });
 
 
@@ -582,6 +586,38 @@ export function initSocketIO(httpServer: HTTPServer) {
             io.to(roomId).emit('user-joined', { users: getRoomUsers(roomId) });
         });
 
+        socket.on('start-screen-share', () => {
+            const roomId = socketData.currentRoom;
+            if (!roomId || !rooms[roomId]) return;
+
+            if (rooms[roomId].screenShareBy) {
+                return socket.emit('chat-message', { type: 'system', text: '⚠️ Someone is already sharing their screen.' });
+            }
+
+            rooms[roomId].screenShareBy = socket.id;
+            io.to(roomId).emit('screen-share-started', { userId: socket.id, userName: socketData.userName });
+            
+            io.to(roomId).emit('chat-message', {
+                type: 'system',
+                text: `🖥️ ${socketData.userName} started screen sharing.`
+            });
+        });
+
+        socket.on('stop-screen-share', () => {
+            const roomId = socketData.currentRoom;
+            if (!roomId || !rooms[roomId]) return;
+
+            if (rooms[roomId].screenShareBy === socket.id) {
+                rooms[roomId].screenShareBy = null;
+                io.to(roomId).emit('screen-share-stopped', { userId: socket.id });
+                
+                io.to(roomId).emit('chat-message', {
+                    type: 'system',
+                    text: `🖥️ ${socketData.userName} stopped screen sharing.`
+                });
+            }
+        });
+
         // WebRTC Signaling
         socket.on('signal', (data) => {
             const roomId = socketData.currentRoom;
@@ -643,7 +679,13 @@ export function initSocketIO(httpServer: HTTPServer) {
             if (!roomId || !rooms[roomId]) return;
 
             const wasAdmin = rooms[roomId].users[socket.id]?.isAdmin;
+            const wasSharing = rooms[roomId].screenShareBy === socket.id;
             delete rooms[roomId].users[socket.id];
+
+            if (wasSharing) {
+                rooms[roomId].screenShareBy = null;
+                io.to(roomId).emit('screen-share-stopped', { userId: socket.id });
+            }
 
             const remainingUserIds = Object.keys(rooms[roomId].users);
             if (remainingUserIds.length === 0) {

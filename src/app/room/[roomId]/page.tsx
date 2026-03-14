@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { io, Socket } from "socket.io-client";
-import { LogOut, Send, Users, Youtube, Share2, History, Clock, MessageSquare, ShieldCheck, ShieldAlert, Mic, MicOff, Settings, ChevronDown, Search, Loader2, Trash2, ListVideo, PlayCircle, PlusCircle, Home, Smile, Volume2, VolumeX } from "lucide-react";
+import { LogOut, Send, Users, Youtube, Share2, History, Clock, MessageSquare, ShieldCheck, ShieldAlert, Mic, MicOff, Settings, ChevronDown, Search, Loader2, Trash2, ListVideo, PlayCircle, PlusCircle, Home, Smile, Volume2, VolumeX, Monitor, MonitorOff } from "lucide-react";
 import EmojiPicker, { Theme, EmojiClickData } from 'emoji-picker-react';
 import { useSession } from "next-auth/react";
 import Header from "@/components/layout/Header";
@@ -100,6 +100,11 @@ export default function RoomPage() {
     const [chatInput, setChatInput] = useState("");
     const [videoUrl, setVideoUrl] = useState("");
     const [isPlayerReady, setIsPlayerReady] = useState(false);
+    const [screenStream, setScreenStream] = useState<MediaStream | null>(null);
+    const [isSharingScreen, setIsSharingScreen] = useState(false);
+    const [sharingScreenUserId, setSharingScreenUserId] = useState<string | null>(null);
+    const screenShareRef = useRef<HTMLVideoElement | null>(null);
+    const screenStreamRef = useRef<MediaStream | null>(null);
     const hasJoinedRoom = useRef(false);
 
     const [currentVideoId, setCurrentVideoId] = useState<string>("");
@@ -254,6 +259,9 @@ export default function RoomPage() {
             if (localStreamRef.current) {
                 localStreamRef.current.getTracks().forEach(track => track.stop());
             }
+            if (screenStreamRef.current) {
+                screenStreamRef.current.getTracks().forEach(track => track.stop());
+            }
         };
     }, []);
 
@@ -310,7 +318,9 @@ export default function RoomPage() {
 
                 for (const targetId in peerConnections.current) {
                     const pc = peerConnections.current[targetId];
-                    stream.getAudioTracks().forEach(track => pc.addTrack(track, stream));
+                    if (pc.connectionState !== 'closed') {
+                        stream.getAudioTracks().forEach(track => pc.addTrack(track, stream));
+                    }
                 }
             } else {
                 const newMuteState = !isMuted;
@@ -322,6 +332,75 @@ export default function RoomPage() {
             console.error("Mic access denied:", err);
             alert("Could not access microphone.");
         }
+    };
+
+    const toggleScreenShare = async () => {
+        if (isSharingScreen) {
+            stopScreenShare();
+        } else {
+            startScreenShare();
+        }
+    };
+
+    const startScreenShare = async () => {
+        if (sharingScreenUserId && sharingScreenUserId !== socket?.id) {
+            alert("Someone is already sharing their screen.");
+            return;
+        }
+
+        try {
+            const stream = await navigator.mediaDevices.getDisplayMedia({
+                video: {
+                    width: { ideal: 1920 },
+                    height: { ideal: 1080 },
+                    frameRate: { ideal: 30 }
+                },
+                audio: true
+            });
+
+            setScreenStream(stream);
+            screenStreamRef.current = stream;
+            setIsSharingScreen(true);
+            setSharingScreenUserId(socket?.id || null);
+            socket?.emit('start-screen-share');
+
+            // Add all tracks (video and potentially audio) to peer connections
+            stream.getTracks().forEach(track => {
+                track.onended = () => {
+                    stopScreenShare();
+                };
+
+                for (const targetId in peerConnections.current) {
+                    const pc = peerConnections.current[targetId];
+                    if (pc.connectionState !== 'closed') {
+                        pc.addTrack(track, stream);
+                    }
+                }
+            });
+        } catch (err) {
+            console.error("Screen share error:", err);
+        }
+    };
+
+    const stopScreenShare = () => {
+        if (screenStreamRef.current) {
+            screenStreamRef.current.getTracks().forEach(track => {
+                track.stop();
+                // Remove from peer connections
+                for (const targetId in peerConnections.current) {
+                    const pc = peerConnections.current[targetId];
+                    if (pc.connectionState !== 'closed') {
+                        const sender = pc.getSenders().find(s => s.track === track);
+                        if (sender) pc.removeTrack(sender);
+                    }
+                }
+            });
+            setScreenStream(null);
+            screenStreamRef.current = null;
+        }
+        setIsSharingScreen(false);
+        setSharingScreenUserId(null);
+        socket?.emit('stop-screen-share');
     };
 
     const createPC = (targetId: string) => {
@@ -358,6 +437,16 @@ export default function RoomPage() {
 
         pc.ontrack = (event) => {
             const stream = event.streams[0];
+            
+            // If the track is part of a stream with video, it's likely a screen share
+            if (event.track.kind === 'video' || stream.getVideoTracks().length > 0) {
+                setScreenStream(stream);
+                setSharingScreenUserId(targetId);
+                // The <video> element will handle playing both video and audio from this stream
+                return;
+            }
+
+            // Otherwise it's a microphone track
             remoteStreams.current[targetId] = stream;
 
             let audio = document.getElementById(`audio-${targetId}`) as HTMLAudioElement;
@@ -386,6 +475,13 @@ export default function RoomPage() {
         if (currentStream) {
             currentStream.getAudioTracks().forEach(track => {
                 pc.addTrack(track, currentStream);
+            });
+        }
+
+        const currentScreenStream = screenStreamRef.current;
+        if (currentScreenStream && isSharingScreen) {
+            currentScreenStream.getVideoTracks().forEach(track => {
+                pc.addTrack(track, currentScreenStream);
             });
         }
 
@@ -520,13 +616,15 @@ export default function RoomPage() {
             });
         }
 
-        socket.on('room-joined', ({ videoState, users, history: roomHistory, queue: roomQueue, isAdmin: userIsAdmin }) => {
+        socket.on('room-joined', ({ videoState, users, history: roomHistory, queue: roomQueue, isAdmin: userIsAdmin, screenShareBy }) => {
             setUsers(users);
             setIsAdmin(!!userIsAdmin);
             lastRoomState.current = videoState;
             lastSyncAt.current = Date.now();
             if (roomHistory) setHistory(roomHistory);
             if (roomQueue) setQueue(roomQueue);
+            if (screenShareBy) setSharingScreenUserId(screenShareBy);
+            
             if (videoState.videoId) {
                 setCurrentVideoId(videoState.videoId);
                 setCurrentVideoTitle(videoState.title || "");
@@ -609,6 +707,10 @@ export default function RoomPage() {
                 peerConnections.current[id].close();
                 delete peerConnections.current[id];
             }
+            if (sharingScreenUserId === id) {
+                setScreenStream(null);
+                setSharingScreenUserId(null);
+            }
             const audio = document.getElementById(`audio-${id}`);
             if (audio) audio.remove();
         });
@@ -679,6 +781,18 @@ export default function RoomPage() {
                 notificationSound.current?.play().catch(() => { });
             }
         });
+
+        socket.on('screen-share-started', ({ userId }) => {
+            setSharingScreenUserId(userId);
+            // If we are already connected to this user, they will send a track which will trigger ontrack
+        });
+
+        socket.on('screen-share-stopped', ({ userId }) => {
+            if (sharingScreenUserId === userId) {
+                setScreenStream(null);
+                setSharingScreenUserId(null);
+            }
+        });
         socket.on('history-updated', (newHistory) => {
             setHistory(newHistory);
         });
@@ -737,6 +851,12 @@ export default function RoomPage() {
             hasJoinedRoom.current = false;
         };
     }, [socket, userName, roomId, isPlayerReady]);
+
+    useEffect(() => {
+        if (screenShareRef.current && screenStream) {
+            screenShareRef.current.srcObject = screenStream;
+        }
+    }, [screenStream]);
 
     useEffect(() => {
         if (!socket) return;
@@ -844,9 +964,34 @@ export default function RoomPage() {
                     <div ref={videoContainerRef} className="relative rounded-[16px] sm:rounded-[20px]  bg-black glass-card shrink-0"
                         style={{ aspectRatio: '16/9' }}
                     >
-                        <div id="player" className="absolute inset-0 w-full h-full" />
+                        <div id="player" className={`absolute inset-0 w-full h-full ${sharingScreenUserId ? 'opacity-0 pointer-events-none' : 'opacity-100'}`} />
 
-                        {!currentVideoId && (
+                        {sharingScreenUserId && (
+                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black z-20">
+                                {screenStream ? (
+                                    <video
+                                        ref={screenShareRef}
+                                        autoPlay
+                                        playsInline
+                                        muted={sharingScreenUserId === socket?.id}
+                                        className="w-full h-full object-contain"
+                                    />
+                                ) : (
+                                    <div className="flex flex-col items-center gap-4">
+                                        <Loader2 className="w-10 h-10 animate-spin text-primary" />
+                                        <p className="text-white font-medium">Connecting to screen share...</p>
+                                    </div>
+                                )}
+                                <div className="absolute top-4 left-4 bg-black/60 px-3 py-1.5 rounded-full flex items-center gap-2 border border-white/10">
+                                    <Monitor className="w-3.5 h-3.5 text-primary" />
+                                    <span className="text-[0.7rem] font-bold text-white tracking-wider uppercase">
+                                        {sharingScreenUserId === socket?.id ? "You are sharing" : `${users.find(u => u.id === sharingScreenUserId)?.name || "Someone"} is sharing`}
+                                    </span>
+                                </div>
+                            </div>
+                        )}
+
+                        {!currentVideoId && !sharingScreenUserId && (
                             <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 bg-[#0a0a0a] z-10">
                                 <div className="w-16 h-16 sm:w-20 sm:h-20 bg-primary/10 rounded-full flex items-center justify-center mb-4 sm:mb-6 animate-pulse">
                                     <Youtube className="w-8 h-8 sm:w-10 sm:h-10 text-primary" />
@@ -1204,6 +1349,14 @@ export default function RoomPage() {
                                 <span className="text-[0.8rem] font-semibold text-[#AAAAAA] uppercase tracking-wider">Live Chat</span>
                             </div>
                             <div className="flex gap-1.5">
+                                <button
+                                    className={`w-9 h-9 flex items-center justify-center rounded-lg transition-all ${isSharingScreen ? 'bg-primary text-white' : (sharingScreenUserId ? 'bg-yellow-500/20 text-yellow-500' : 'bg-white/5 text-[#555555] hover:text-[#AAAAAA]')}`}
+                                    onClick={toggleScreenShare}
+                                    title={isSharingScreen ? "Stop Sharing" : (sharingScreenUserId ? "Someone is sharing" : "Share Screen")}
+                                    disabled={!!(sharingScreenUserId && sharingScreenUserId !== socket?.id)}
+                                >
+                                    {isSharingScreen ? <MonitorOff className="w-4 h-4" /> : <Monitor className="w-4 h-4" />}
+                                </button>
                                 <button
                                     className={`w-9 h-9 flex items-center justify-center rounded-lg transition-all ${isMuted ? 'bg-red-500/10 text-red-500' : 'bg-green-500/20 text-green-500'}`}
                                     onClick={toggleMic}
