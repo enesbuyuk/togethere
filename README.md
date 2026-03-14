@@ -4,6 +4,18 @@ Togethere is a real-time web application built for watching YouTube videos synch
 
 ![Togethere Logo](public/logo-text.svg)
 
+## Table of Contents
+
+- [Core Capabilities](#core-capabilities)
+- [Screenshots](#screenshots)
+- [Technical Details](#technical-details)
+- [Requirements](#requirements)
+- [Environment Variables](#environment-variables)
+- [Installation and Setup](#installation-and-setup)
+- [Usage Guide](#usage-guide)
+- [Contributing](#contributing)
+- [License](#license)
+
 ## Core Capabilities
 
 - **Live Sync**: Precise synchronization of playback state (play, pause, seek) across all clients in a room.
@@ -12,6 +24,30 @@ Togethere is a real-time web application built for watching YouTube videos synch
 - **Playback Control**: Advanced queue management and session history.
 - **Room Management**: Support for private room creation and joining via unique codes.
 - **Modern Interface**: Custom-built UI using glassmorphism aesthetics and responsive layouts.
+
+## Screenshots
+
+### Landing and Authentication
+<p align="center">
+  <img src="docs/home.png" alt="Home Page" width="48%" />
+  <img src="docs/login.png" alt="Login Page" width="48%" />
+</p>
+<p align="center">
+  <img src="docs/register.png" alt="Register Page" width="48%" />
+</p>
+
+### Dashboard and Room
+<p align="center">
+  <img src="docs/dashboard.png" alt="Dashboard" width="100%" />
+</p>
+<p align="center">
+  <img src="docs/room.png" alt="Watch Room" width="100%" />
+</p>
+
+### Settings
+<p align="center">
+  <img src="docs/profile.png" alt="Profile Settings" width="100%" />
+</p>
 
 ## Technical Details
 
@@ -22,12 +58,20 @@ Togethere is a real-time web application built for watching YouTube videos synch
 - **Icons**: Lucide React
 - **Runtime**: Node.js with tsx
 
-## Installation and Setup
-
-### Requirements
-
 - Node.js (Latest stable)
 - pnpm (Recommended)
+
+## Environment Variables
+
+Create a `.env` file in the root directory and configure the following variables:
+
+| Variable | Description | Default / Example |
+| :--- | :--- | :--- |
+| `NEXTAUTH_URL` | The base URL of your application | `http://localhost:3000` |
+| `NEXTAUTH_SECRET` | A secret key used to encrypt session tokens | `your_secret_key_here` |
+
+> [!TIP]
+> You can use the provided `env.example` file as a template: `cp env.example .env`
 
 ### Running with Docker (Recommended)
 
@@ -52,9 +96,17 @@ Togethere is a real-time web application built for watching YouTube videos synch
    pnpm install
    ```
 
-3. Start the development server:
+3. Choose an execution mode:
+
+   **Development Mode** (with hot-reload):
    ```bash
    pnpm dev
+   ```
+
+   **Production Mode** (optimized):
+   ```bash
+   pnpm build
+   pnpm start
    ```
 
 4. Access the application at [http://localhost:3000](http://localhost:3000)
