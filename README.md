@@ -129,4 +129,4 @@ Contributions are welcome. Please open an issue or submit a pull request for any
 
 ## License
 
-MIT License
+This project is licensed under the [MIT License](LICENSE?tab=MIT-1-ov-file).
