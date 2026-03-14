@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { io, Socket } from "socket.io-client";
-import { LogOut, Send, Users, Youtube, Share2, History, Clock, MessageSquare, ShieldCheck, ShieldAlert, Mic, MicOff, Settings, ChevronDown, Search, Loader2, Trash2, ListVideo, PlayCircle, PlusCircle, Home, Smile } from "lucide-react";
+import { LogOut, Send, Users, Youtube, Share2, History, Clock, MessageSquare, ShieldCheck, ShieldAlert, Mic, MicOff, Settings, ChevronDown, Search, Loader2, Trash2, ListVideo, PlayCircle, PlusCircle, Home, Smile, Volume2, VolumeX } from "lucide-react";
 import EmojiPicker, { Theme, EmojiClickData } from 'emoji-picker-react';
 import { useSession } from "next-auth/react";
 import Header from "@/components/layout/Header";
@@ -93,6 +93,8 @@ export default function RoomPage() {
     const [selectedMicId, setSelectedMicId] = useState<string>("");
     const [showMicSettings, setShowMicSettings] = useState(false);
     const [userVolumes, setUserVolumes] = useState<Record<string, number>>({});
+    const [videoVolume, setVideoVolume] = useState<number>(50);
+    const [isMutedVideo, setIsMutedVideo] = useState<boolean>(false);
     const [openSettingsUserId, setOpenSettingsUserId] = useState<string | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
     const [chatInput, setChatInput] = useState("");
@@ -129,6 +131,12 @@ export default function RoomPage() {
         notificationSound.current.volume = 0.4;
         setIsMounted(true);
 
+        // Load saved volume
+        const savedVolume = localStorage.getItem('videoVolume');
+        const savedMute = localStorage.getItem('isMutedVideo');
+        if (savedVolume) setVideoVolume(parseInt(savedVolume));
+        if (savedMute) setIsMutedVideo(savedMute === 'true');
+
         const handleClickOutside = (event: MouseEvent) => {
             if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target as Node)) {
                 setShowEmojiPicker(false);
@@ -138,6 +146,24 @@ export default function RoomPage() {
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
+
+    useEffect(() => {
+        if (isMounted) {
+            localStorage.setItem('videoVolume', videoVolume.toString());
+            localStorage.setItem('isMutedVideo', isMutedVideo.toString());
+        }
+    }, [videoVolume, isMutedVideo, isMounted]);
+
+    useEffect(() => {
+        if (playerRef.current && isPlayerReady) {
+            if (isMutedVideo) {
+                playerRef.current.mute();
+            } else {
+                playerRef.current.unMute();
+                playerRef.current.setVolume(videoVolume);
+            }
+        }
+    }, [videoVolume, isMutedVideo, isPlayerReady]);
 
     useEffect(() => {
         isAdminRef.current = isAdmin;
@@ -978,6 +1004,26 @@ export default function RoomPage() {
                                     {currentVideoUploadDate && (
                                         <span className="text-[0.75rem] text-[#888888] font-medium">• {currentVideoUploadDate}</span>
                                     )}
+                                </div>
+                                <div className="mt-3 flex items-center gap-3 bg-white/5 py-1.5 px-3 rounded-lg border border-white/5 w-fit">
+                                    <button 
+                                        onClick={() => setIsMutedVideo(!isMutedVideo)}
+                                        className="text-[#AAAAAA] hover:text-white transition-colors"
+                                    >
+                                        {isMutedVideo || videoVolume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                                    </button>
+                                    <input
+                                        type="range"
+                                        min="0"
+                                        max="100"
+                                        value={isMutedVideo ? 0 : videoVolume}
+                                        onChange={(e) => {
+                                            setVideoVolume(parseInt(e.target.value));
+                                            if (isMutedVideo) setIsMutedVideo(false);
+                                        }}
+                                        className="w-24 sm:w-32 h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-primary"
+                                    />
+                                    <span className="text-[0.7rem] font-bold text-primary w-8">{isMutedVideo ? 0 : videoVolume}%</span>
                                 </div>
                             </div>
                         </div>
