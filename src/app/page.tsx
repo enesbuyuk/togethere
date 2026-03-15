@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import Image from "next/image";
-import { Rocket, Zap, MessageSquare, ListVideo, ArrowRight, ShieldCheck, Sparkles } from "lucide-react";
+import { Rocket, Zap, MessageSquare, ListVideo, ArrowRight, ShieldCheck, Sparkles, Monitor, Mic, History, Users } from "lucide-react";
 import Header from "@/components/layout/Header";
 
 function LandingContent() {
@@ -19,7 +19,7 @@ function LandingContent() {
         <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-primary/20 rounded-full blur-[120px] -z-10 animate-orb-move"></div>
         <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-blue-600/20 rounded-full blur-[120px] -z-10 animate-orb-move [animation-delay:-5s]"></div>
 
-        <div className="max-w-4xl w-full text-center space-y-12">
+        <div className="max-w-6xl w-full text-center space-y-12">
           {/* Hero Section */}
           <div className="space-y-6">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-xs font-bold text-primary uppercase tracking-[0.2em] animate-fade-in-down">
@@ -67,21 +67,24 @@ function LandingContent() {
           </div>
 
           {/* Features Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-16">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 pt-16">
             {[
-              { icon: <Zap />, color: "text-primary", title: "Live Sync", desc: "Military-grade synchronization for a seamless experience." },
-              { icon: <MessageSquare />, color: "text-blue-500", title: "Smart Chat", desc: "Interact with friends with rich emojis and reactions." },
-              { icon: <ShieldCheck />, color: "text-green-500", title: "Secure", desc: "Your rooms, your rules. Fully private and encrypted." }
+              { icon: <Zap />, color: "text-primary", title: "Live Sync", desc: "Military-grade synchronization." },
+              { icon: <Mic />, color: "text-green-500", title: "Voice Chat", desc: "Crystal clear WebRTC audio." },
+              { icon: <Monitor />, color: "text-purple-500", title: "Screen Share", desc: "Instantly share your desktop." },
+              { icon: <MessageSquare />, color: "text-blue-500", title: "Smart Chat", desc: "Rich emojis and reactions." },
+              { icon: <Users />, color: "text-amber-500", title: "Rooms", desc: "Private invite-only spaces." },
+              { icon: <History />, color: "text-sky-500", title: "History", desc: "Never lose a shared moment." }
             ].map((feature, i) => (
               <div
                 key={i}
-                className="glass-card p-6 flex flex-col items-center gap-3 hover:bg-white/10 transition-all border border-white/5"
+                className="glass-card p-5 flex flex-col items-center gap-3 hover:bg-white/10 transition-all border border-white/5 group"
               >
-                <div className={`${feature.color} bg-white/5 p-4 rounded-2xl`}>
+                <div className={`${feature.color} bg-white/5 p-3 rounded-xl group-hover:scale-110 transition-transform`}>
                   {feature.icon}
                 </div>
-                <h3 className="text-lg font-bold text-white">{feature.title}</h3>
-                <p className="text-white/40 text-sm">{feature.desc}</p>
+                <h3 className="text-md font-bold text-white whitespace-nowrap">{feature.title}</h3>
+                <p className="text-white/40 text-xs leading-relaxed">{feature.desc}</p>
               </div>
             ))}
           </div>
