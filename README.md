@@ -4,6 +4,9 @@ Togethere is a real-time web application built for watching YouTube videos synch
 
 ![Togethere Logo](public/logo-text.svg)
 
+[**🌐 Live Demo**](https://togethere.enesbuyuk.com)
+
+
 ## Table of Contents
 
 - [Core Capabilities](#core-capabilities)
@@ -23,6 +26,7 @@ Togethere is a real-time web application built for watching YouTube videos synch
 - **YouTube Integration**: Direct video search and support for links, IDs, and playlists.
 - **Playback Control**: Advanced queue management and session history.
 - **Room Management**: Support for private room creation and joining via unique codes.
+- **Screen Sharing**: High-quality, low-latency screen sharing functionality powered by WebRTC.
 - **Modern Interface**: Custom-built UI using glassmorphism aesthetics and responsive layouts.
 
 ## Screenshots
@@ -53,7 +57,7 @@ Togethere is a real-time web application built for watching YouTube videos synch
 
 - **Framework**: Next.js 16 (App Router)
 - **Real-Time Engine**: Socket.IO
-- **Voice Protocol**: WebRTC
+- **Communication Protocol**: WebRTC (Voice & Screen Sharing)
 - **Styling**: Tailwind CSS 4
 - **Icons**: Lucide React
 - **Runtime**: Node.js with tsx
@@ -122,6 +126,7 @@ Create a `.env` file in the root directory and configure the following variables
 3. Share the room link with others.
 4. Load content using a YouTube URL or the internal search functionality.
 5. Control playback as an admin to lead the shared session.
+6. Share your desktop or specific windows using the high-quality screen sharing feature located in the chat panel.
 
 ## Contributing
 
