@@ -87,7 +87,7 @@ Create a `.env` file in the root directory and configure the following variables
 2. Create/update your `.env` file if necessary.
 3. Build and start the containers:
    ```bash
-   docker-compose up -d --build
+   docker compose up -d --build
    ```
 4. Access the application at [http://localhost:3000](http://localhost:3000).
 
